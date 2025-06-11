@@ -15,7 +15,7 @@ with open('dataset_info.md', 'r') as f:
     dataset_info = f.read()
 
 # Numeric features that were scaled
-num_feats = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE','BMI']
+num_cols = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE','BMI']
 
 # ----------------------------------------
 # Category → code mappings
@@ -53,7 +53,7 @@ def preprocess_input(df_in: pd.DataFrame) -> pd.DataFrame:
             df[col] = 0
 
     df = df[feature_columns]
-    df[num_feats] = scaler.transform(df[num_feats])
+    df[num_cols] = scaler.transform(df[num_cols])
     return df
 
 # ----------------------------------------
