@@ -123,7 +123,7 @@ elif page == "Single Prediction":
         Xp = preprocess_input(input_df)
 
         # raw predictions
-        p_xgb = xgb_tuned.predict(Xp)[0]
+        p_xgb = xgb_best.predict(Xp)[0]
 
         # map back to labels
         c_xgb = le.inverse_transform([p_xgb])[0]
@@ -142,7 +142,7 @@ elif page == "Bulk Prediction":
         st.dataframe(data.head())
 
         proc = preprocess_input(data)
-        preds = xgb_tuned.predict(proc)
+        preds = xgb_best.predict(proc)
         data['Predicted_NObeyesdad'] = le.inverse_transform(preds)
 
         st.subheader("Predictions")
