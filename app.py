@@ -123,7 +123,8 @@ elif page == "Single Prediction":
         Xp = preprocess_input(input_df)
 
         # raw predictions
-        p_xgb = xgb_best.predict(Xp)[0]
+        raw_prediction = xgb_tuned.predict(Xp)
+        p_xgb = int(raw_prediction[0])
 
         # map back to labels
         c_xgb = le.inverse_transform([p_xgb])[0]
