@@ -65,7 +65,13 @@ page = st.sidebar.radio("Go to", [ "Single Prediction", "Bulk Prediction"])
 # ----------------------------------------
 # 4. ABOUT page
 # ----------------------------------------
-
+if page == "About":
+    st.title("Obesity Classification App")
+    
+    st.markdown("""
+    **Purpose:**  
+    Classify individuals into obesity categories using KNN, SVM, and XGBoost (all hyperparameter‑tuned).
+    """)
 # ----------------------------------------
 # 5. SINGLE PREDICTION page
 # ----------------------------------------
