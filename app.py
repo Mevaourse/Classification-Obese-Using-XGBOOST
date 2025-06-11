@@ -133,3 +133,25 @@ elif page == "Single Prediction":
 # ----------------------------------------
 # 6. BULK PREDICTION page
 # ----------------------------------------
+elif page == "Bulk Prediction":
+    st.title("Bulk CSV Prediction")
+    uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+    if uploaded_file:
+        data = pd.read_csv(uploaded_file)
+        st.write("Preview of uploaded data:")
+        st.dataframe(data.head())
+
+        proc = preprocess_input(data)
+        preds = xgb_tuned.predict(proc)
+        data['Predicted_NObeyesdad'] = le.inverse_transform(preds)
+
+        st.subheader("Predictions")
+        st.dataframe(data[['Predicted_NObeyesdad']])
+
+        csv = data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            "Download predictions as CSV",
+            data=csv,
+            file_name="predictions.csv",
+            mime="text/csv"
+        )
