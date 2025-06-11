@@ -7,7 +7,7 @@ import joblib
 # 1. Load saved artifacts
 # ----------------------------------------
 scaler           = joblib.load('models/scaler.pkl')
-xgb_tuned        = joblib.load('models/xgb_tuned.pkl')
+xgb_tuned        = joblib.load('models/xgb_best.pkl')
 le               = joblib.load('models/label_encoder.pkl')
 feature_columns  = joblib.load('models/feature_columns.pkl')
 
