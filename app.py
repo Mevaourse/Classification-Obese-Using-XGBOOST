@@ -15,7 +15,7 @@ with open('dataset_info.md', 'r') as f:
     dataset_info = f.read()
 
 # Numeric features that were scaled
-num_cols = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE','BMI']
+num_cols = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE']
 
 # ----------------------------------------
 # Category → code mappings
@@ -40,7 +40,7 @@ mtrans_map = {
 # ----------------------------------------
 def preprocess_input(df_in: pd.DataFrame) -> pd.DataFrame:
     df = df_in.copy()
-    df['BMI'] = df['Weight'] / (df['Height'] ** 2)
+    
 
     cat_cols = [
         'Gender','CALC','FAVC','SCC','SMOKE',
