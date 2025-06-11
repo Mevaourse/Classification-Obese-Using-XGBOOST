@@ -1,98 +1,129 @@
 import streamlit as st
-import joblib
 import pandas as pd
 import numpy as np
+import joblib
 
-# Fungsi untuk memuat model dan scaler
-@st.cache_resource
-def load_resources():
-    scaler = joblib.load('models/scaler.pkl')
-    model = joblib.load('models/xgb_best.pkl')
-    feature_columns = joblib.load('models/feature_columns.pkl')
-    label_encoder = joblib.load('models/label_encoder.pkl')
-    return scaler, model, feature_columns , label_encoder
+# ----------------------------------------
+# 1. Load saved artifacts
+# ----------------------------------------
+scaler           = joblib.load('models/scaler.pkl')
+xgb_tuned        = joblib.load('models/xgb_tuned.pkl')
+le               = joblib.load('models/label_encoder.pkl')
+feature_columns  = joblib.load('models/feature_columns.pkl')
 
-scaler, model, feature_columns = load_resources()
+with open('dataset_info.md', 'r') as f:
+    dataset_info = f.read()
 
-# Judul Aplikasi
-st.title("Aplikasi Klasifikasi Obesitas")
+# Numeric features that were scaled
+num_feats = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE','BMI']
 
-st.write("""
-Aplikasi ini memprediksi tingkat obesitas berdasarkan beberapa fitur.
-""")
-
-# Bagian Input Pengguna
-st.header("Input Data Pengguna")
-
-# Buat input untuk setiap fitur
-gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
-age = st.slider("Umur", 0, 100, 25)
-height = st.number_input("Tinggi Badan (cm)", min_value=50.0, max_value=300.0, value=170.0)
-weight = st.number_input("Berat Badan (kg)", min_value=10.0, max_value=500.0, value=60.0)
-family_history_with_overweight = st.selectbox("Riwayat Keluarga dengan Obesitas", ['yes', 'no'])
-FAVC = st.selectbox("Konsumsi Makanan Tinggi Kalori", ['yes', 'no'])
-FCVC = st.slider("Konsumsi Sayuran (kali/hari)", 1.0, 3.0, 2.0)
-NCP = st.slider("Jumlah Makanan Utama (kali/hari)", 1.0, 4.0, 3.0)
-CAEC = st.selectbox("Konsumsi Makanan di Antara Waktu Makan", ['no', 'Sometimes', 'Frequently', 'Always'])
-SMOKE = st.selectbox("Merokok", ['yes', 'no'])
-SCC = st.selectbox("Monitoring Asupan Kalori", ['yes', 'no'])
-CH2O = st.slider("Konsumsi Air (liter/hari)", 1.0, 3.0, 2.0)
-FAF = st.slider("Aktivitas Fisik (kali/minggu)", 0.0, 3.0, 1.0)
-TUE = st.slider("Waktu Penggunaan Perangkat (jam/hari)", 0.0, 2.0, 0.0)
-CALC = st.selectbox("Konsumsi Alkohol", ['no', 'Sometimes', 'Frequently', 'Always'])
-MTRANS = st.selectbox("Alat Transportasi yang Digunakan", ['Public_Transportation', 'Walking', 'Automobile', 'Motorbike', 'Bike'])
-
-# Konversi input kategori ke numerik sesuai dengan cara pelatihan model
-# Anda perlu tahu bagaimana setiap kategori dikonversi selama pelatihan.
-# Ini adalah contoh sederhana, Anda mungkin perlu menyesuaikannya dengan LabelEncoder yang digunakan.
-input_data = {
-    'Gender': 1 if gender == 'Male' else 0, # Contoh konversi binary
-    'Age': age,
-    'Height': height,
-    'Weight': weight,
-    'family_history_with_overweight': 1 if family_history_with_overweight == 'yes' else 0, # Contoh konversi binary
-    'FAVC': 1 if FAVC == 'yes' else 0, # Contoh konversi binary
-    'FCVC': FCVC,
-    'NCP': NCP,
-    'CAEC': {'no': 0, 'Sometimes': 1, 'Frequently': 2, 'Always': 3}[CAEC], # Contoh konversi multiple category
-    'SMOKE': 1 if SMOKE == 'yes' else 0, # Contoh konversi binary
-    'SCC': 1 if SCC == 'yes' else 0, # Contoh konversi binary
-    'CH2O': CH2O,
-    'FAF': FAF,
-    'TUE': TUE,
-    'CALC': {'no': 0, 'Sometimes': 1, 'Frequently': 2, 'Always': 3}[CALC], # Contoh konversi multiple category
-    'MTRANS': {'Public_Transportation': 0, 'Walking': 1, 'Automobile': 2, 'Motorbike': 3, 'Bike': 4}[MTRANS] # Contoh konversi multiple category
+# ----------------------------------------
+# Category → code mappings
+# ----------------------------------------
+gender_map = {'Female': 0, 'Male': 1}
+calc_map   = {'no': 0, 'Sometimes': 1, 'Frequently': 2}
+favc_map   = {'no': 0, 'yes': 1}
+scc_map    = {'no': 0, 'yes': 1}
+smoke_map  = {'no': 0, 'yes': 1}
+fam_map    = {'no': 0, 'yes': 1}
+caec_map   = {'no': 0, 'Sometimes': 1, 'Frequently': 2, 'Always': 3}
+mtrans_map = {
+    'Public_Transportation': 0,
+    'Walking':               1,
+    'Automobile':            2,
+    'Bike':                  3,
+    'Motorbike':             4
 }
 
-# Buat DataFrame dari input pengguna
-input_df = pd.DataFrame([input_data])
+# ----------------------------------------
+# 2. Preprocessing helper
+# ----------------------------------------
+def preprocess_input(df_in: pd.DataFrame) -> pd.DataFrame:
+    df = df_in.copy()
+    df['BMI'] = df['Weight'] / (df['Height'] ** 2)
 
-# Pastikan urutan kolom sesuai dengan feature_columns
-input_df = input_df[feature_columns]
+    cat_cols = [
+        'Gender','CALC','FAVC','SCC','SMOKE',
+        'family_history_with_overweight','CAEC','MTRANS'
+    ]
+    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-# Lakukan scaling pada input pengguna
-input_scaled = scaler.transform(input_df)
+    for col in feature_columns:
+        if col not in df.columns:
+            df[col] = 0
 
-# Tombol Prediksi
-if st.button("Prediksi Tingkat Obesitas"):
-    # Lakukan prediksi
-    prediction_numeric = model.predict(input_scaled)
+    df = df[feature_columns]
+    df[num_feats] = scaler.transform(df[num_feats])
+    return df
 
-    # Konversi hasil prediksi numerik kembali ke label kategori asli
-    # Ini membutuhkan LabelEncoder yang digunakan saat pelatihan
-    # Jika Anda tidak menyimpannya, Anda mungkin perlu mendefinisikan mapping manual
-    # atau melatih ulang LabelEncoder di sini dengan data asli.
-    # Contoh konversi manual (sesuaikan dengan data Anda)
-    label_mapping = {
-        0: 'Insufficient_Weight',
-        1: 'Normal_Weight',
-        2: 'Overweight_Level_I',
-        3: 'Overweight_Level_II',
-        4: 'Obesity_Type_I',
-        5: 'Obesity_Type_II',
-        6: 'Obesity_Type_III'
-    }
-    predicted_label = label_mapping.get(prediction_numeric[0], "Unknown") # Menggunakan get untuk menghindari error jika label tidak ditemukan
+# ----------------------------------------
+# 3. Sidebar navigation
+# ----------------------------------------
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", [ "Single Prediction", "Bulk Prediction"])
 
-    st.subheader("Hasil Prediksi")
-    st.write(f"Tingkat Obesitas yang Diprediksi: **{predicted_label}**")
+# ----------------------------------------
+# 4. ABOUT page
+# ----------------------------------------
+
+# ----------------------------------------
+# 5. SINGLE PREDICTION page
+# ----------------------------------------
+elif page == "Single Prediction":
+    st.title("Single‑Row Prediction")
+
+    with st.form("input_form"):
+        age     = st.number_input("Age (years)", 14, 80, 25)
+        gender  = st.selectbox("Gender", list(gender_map.keys()))
+        height  = st.number_input("Height (meters)", 1.2, 2.2, 1.70, format="%.2f")
+        weight  = st.number_input("Weight (kg)", 30.0, 200.0, 60.0, format="%.1f")
+
+        FCVC    = st.number_input("Vegetable freq (FCVC)", 0, 10, 3)
+        NCP     = st.number_input("Meals per day (NCP)", 0, 10, 3)
+        CH2O    = st.number_input("Water intake L (CH2O)", 0.0, 10.0, 2.0)
+        FAF     = st.number_input("Physical activity freq (FAF)", 0.0, 15.0, 1.0)
+        TUE     = st.number_input("Device use hrs (TUE)", 0, 10, 2)
+
+        CALC    = st.selectbox("Caloric drinks (CALC)", list(calc_map.keys()))
+        FAVC    = st.selectbox("High‑cal food (FAVC)", list(favc_map.keys()))
+        SCC     = st.selectbox("Calories monitoring (SCC)", list(scc_map.keys()))
+        SMOKE   = st.selectbox("Smoking habit (SMOKE)", list(smoke_map.keys()))
+        fam     = st.selectbox("Family history overweight", list(fam_map.keys()))
+        CAEC    = st.selectbox("Snacking between meals (CAEC)", list(caec_map.keys()))
+        MTRANS  = st.selectbox("Transport mode (MTRANS)", list(mtrans_map.keys()))
+
+        submitted = st.form_submit_button("Predict")
+
+    if submitted:
+        input_df = pd.DataFrame([{
+            'Age': age,
+            'Gender': gender_map[gender],
+            'Height': height,
+            'Weight': weight,
+            'FCVC': FCVC,
+            'NCP': NCP,
+            'CH2O': CH2O,
+            'FAF': FAF,
+            'TUE': TUE,
+            'CALC': calc_map[CALC],
+            'FAVC': favc_map[FAVC],
+            'SCC': scc_map[SCC],
+            'SMOKE': smoke_map[SMOKE],
+            'family_history_with_overweight': fam_map[fam],
+            'CAEC': caec_map[CAEC],
+            'MTRANS': mtrans_map[MTRANS]
+        }])
+
+        Xp = preprocess_input(input_df)
+
+        # raw predictions
+        p_xgb = xgb_tuned.predict(Xp)[0]
+
+        # map back to labels
+        c_xgb = le.inverse_transform([p_xgb])[0]
+
+        st.write(f"**XGB →** {c_xgb}")
+
+# ----------------------------------------
+# 6. BULK PREDICTION page
+# ----------------------------------------
