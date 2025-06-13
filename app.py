@@ -34,7 +34,7 @@ with st.form("input_form"):
     submitted = st.form_submit_button("Prediksi")
 
 if submitted:
-    # Buat dataframe dari input
+    # Buat DataFrame dari input user
     input_dict = {
         'Gender': [Gender],
         'Age': [Age],
@@ -55,28 +55,28 @@ if submitted:
     }
     input_df = pd.DataFrame(input_dict)
 
-    # Preprocessing: get_dummies
+    # One-hot encoding sesuai training
     input_df = pd.get_dummies(input_df)
 
-    # === Fix Final Aman ===
-    # Tambah kolom yang hilang (harus 0 jika tidak ada)
+    # Pastikan kolom sesuai dengan feature_columns dari training
     missing_cols = [col for col in feature_columns if col not in input_df.columns]
     for col in missing_cols:
         input_df[col] = 0
 
-    # Hapus kolom yang tidak dikenali model
+    # Hapus kolom tambahan yang tidak digunakan saat training
     extra_cols = [col for col in input_df.columns if col not in feature_columns]
     if extra_cols:
         input_df.drop(columns=extra_cols, inplace=True)
 
-    # Urutkan kolom sesuai model
+    # Urutkan kolom agar sesuai
     input_df = input_df[feature_columns]
 
-    # Transformasi (tanpa nama kolom)
-    input_scaled = scaler.transform(input_df.to_numpy())
+    # Skalakan
+    input_scaled = scaler.transform(input_df)
 
     # Prediksi
     pred = model.predict(input_scaled)
     label = label_encoder.inverse_transform(pred)
 
+    # Tampilkan hasil
     st.success(f"Hasil Klasifikasi: **{label[0]}**")
