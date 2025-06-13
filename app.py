@@ -1,82 +1,49 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 
-# Load model dan preprocessing
-model = joblib.load("models/xgb_best.pkl")
-scaler = joblib.load("models/scaler.pkl")
-label_encoder = joblib.load("models/label_encoder.pkl")
-feature_columns = joblib.load("models/feature_columns.pkl")
+# Load models and objects
+xgb_model = joblib.load('models/xgb_tuned.pkl')
+gb_model = joblib.load('models/gb_tuned.pkl')
+rf_model = joblib.load('models/rf_tuned.pkl')
+scaler = joblib.load('models/scaler.pkl')
+label_encoder = joblib.load('models/label_encoder.pkl')
+feature_columns = joblib.load('models/feature_columns.pkl')
 
-st.title("🚀 Aplikasi Klasifikasi Obesitas")
-st.markdown("Masukkan data berikut untuk memprediksi klasifikasi obesitas:")
+# UI Title
+st.title("Aplikasi Klasifikasi Obesitas")
 
-# Buat form input fitur
-with st.form("input_form"):
-    Gender = st.selectbox("Jenis Kelamin", ["Male", "Female"])
-    Age = st.number_input("Usia", min_value=1.0, max_value=100.0, value=25.0)
-    Height = st.number_input("Tinggi Badan (meter)", min_value=1.0, max_value=2.5, value=1.70)
-    Weight = st.number_input("Berat Badan (kg)", min_value=30.0, max_value=200.0, value=70.0)
-    family_history_with_overweight = st.selectbox("Riwayat Keluarga Kegemukan", ["yes", "no"])
-    FAVC = st.selectbox("Sering Konsumsi Makanan Tinggi Kalori", ["yes", "no"])
-    FCVC = st.slider("Frekuensi Konsumsi Sayur (0-3)", 0.0, 3.0, 2.0)
-    NCP = st.slider("Jumlah Makan Utama per Hari", 1.0, 4.0, 3.0)
-    CAEC = st.selectbox("Makan Antara Waktu Makan", ["no", "Sometimes", "Frequently", "Always"])
-    SMOKE = st.selectbox("Merokok", ["yes", "no"])
-    CH2O = st.slider("Jumlah Air per Hari", 0.0, 3.0, 2.0)
-    SCC = st.selectbox("Konsumsi Makanan Kalori Ekstra", ["yes", "no"])
-    FAF = st.slider("Aktivitas Fisik (0-3)", 0.0, 3.0, 1.0)
-    TUE = st.slider("Waktu Layar per Hari (0-3)", 0.0, 3.0, 2.0)
-    CALC = st.selectbox("Konsumsi Alkohol", ["no", "Sometimes", "Frequently", "Always"])
-    MTRANS = st.selectbox("Moda Transportasi", ["Public_Transportation", "Walking", "Automobile", "Motorbike", "Bike"])
+# Sidebar untuk memilih model
+model_choice = st.sidebar.selectbox("Pilih Model", ["XGBoost Tuned", "Gradient Boosting Tuned", "Random Forest Tuned"])
 
-    submitted = st.form_submit_button("Prediksi")
+# Input user
+def user_input():
+    data = {}
+    for col in feature_columns:
+        if col in ['Gender', 'family_history_with_overweight', 'FAVC', 'CAEC', 'SMOKE', 'SCC', 'CALC', 'MTRANS']:
+            data[col] = st.selectbox(f"{col}", options=[0, 1])  # atau sesuaikan label encoder
+        else:
+            data[col] = st.number_input(f"{col}", step=0.1)
+    return pd.DataFrame([data])
 
-if submitted:
-    # Buat DataFrame dari input user
-    input_dict = {
-        'Gender': [Gender],
-        'Age': [Age],
-        'Height': [Height],
-        'Weight': [Weight],
-        'family_history_with_overweight': [family_history_with_overweight],
-        'FAVC': [FAVC],
-        'FCVC': [FCVC],
-        'NCP': [NCP],
-        'CAEC': [CAEC],
-        'SMOKE': [SMOKE],
-        'CH2O': [CH2O],
-        'SCC': [SCC],
-        'FAF': [FAF],
-        'TUE': [TUE],
-        'CALC': [CALC],
-        'MTRANS': [MTRANS]
-    }
-    input_df = pd.DataFrame(input_dict)
+input_df = user_input()
 
-    # One-hot encoding sesuai training
-    input_df = pd.get_dummies(input_df)
-
-    # Pastikan kolom sesuai dengan feature_columns dari training
-    missing_cols = [col for col in feature_columns if col not in input_df.columns]
-    for col in missing_cols:
-        input_df[col] = 0
-
-    # Hapus kolom tambahan yang tidak digunakan saat training
-    extra_cols = [col for col in input_df.columns if col not in feature_columns]
-    if extra_cols:
-        input_df.drop(columns=extra_cols, inplace=True)
-
-    # Urutkan kolom agar sesuai
+if st.button("Prediksi"):
+    # Pastikan urutan kolom benar
     input_df = input_df[feature_columns]
+    
+    # Scaling
+    input_scaled = scaler.transform(input_df)
+    
+    # Model prediksi
+    if model_choice == "XGBoost Tuned":
+        model = xgb_model
+    elif model_choice == "Gradient Boosting Tuned":
+        model = gb_model
+    else:
+        model = rf_model
 
-    # Skalakan
-    input_scaled = scaler.transform(input_df.values)
-
-    # Prediksi
     pred = model.predict(input_scaled)
     label = label_encoder.inverse_transform(pred)
-
-    # Tampilkan hasil
-    st.success(f"Hasil Klasifikasi: **{label[0]}**")
+    
+    st.success(f"Prediksi Kategori Obesitas: {label[0]}")
