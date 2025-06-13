@@ -10,7 +10,8 @@ label_encoder = joblib.load("models/label_encoder.pkl")
 feature_columns = joblib.load("models/feature_columns.pkl")
 
 st.title("🚀 Aplikasi Klasifikasi Obesitas")
-
+st.write("Fitur yang diminta model:", feature_columns)
+st.write("Fitur hasil input user:", input_df.columns.tolist())
 st.markdown("Masukkan data berikut untuk memprediksi klasifikasi obesitas:")
 
 # Buat form input fitur
