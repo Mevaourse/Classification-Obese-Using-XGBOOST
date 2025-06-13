@@ -72,7 +72,7 @@ if submitted:
     input_df = input_df[feature_columns]
 
     # Skalakan
-    input_scaled = scaler.transform(input_df)
+    input_scaled = scaler.transform(input_df.values)
 
     # Prediksi
     pred = model.predict(input_scaled)
