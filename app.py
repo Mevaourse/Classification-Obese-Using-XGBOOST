@@ -45,6 +45,7 @@ elif page == "Prediksi":
     with st.expander("📘 Petunjuk Pengisian Data"):
         st.markdown("""
         - Masukkan nilai **angka** sesuai kondisi Anda:
+            Weight in KG, Height in m
             - Contoh: `Weight = 70`, `Height = 1.75`
         - Untuk kolom **dengan pilihan 0 / 1**, artinya:
             - `0` = Tidak
