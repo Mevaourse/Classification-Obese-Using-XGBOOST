@@ -36,7 +36,7 @@ with st.form("input_form"):
 
 # Jika form disubmit
 if submitted:
-    # Bentuk dataframe dari input
+    # Buat dataframe dari input
     input_dict = {
         'Gender': [Gender],
         'Age': [Age],
@@ -55,18 +55,24 @@ if submitted:
         'CALC': [CALC],
         'MTRANS': [MTRANS]
     }
-
     input_df = pd.DataFrame(input_dict)
 
-    # Pastikan urutan kolom sama dengan saat training
+    # Proses get_dummies seperti saat training
+    input_df = pd.get_dummies(input_df)
+
+    # Tambahkan kolom yang mungkin tidak muncul di input (harus ada semua fitur)
+    missing_cols = [col for col in feature_columns if col not in input_df.columns]
+    for col in missing_cols:
+        input_df[col] = 0  # kolom tidak muncul dianggap 0
+
+    # Urutkan kolom sesuai saat training
     input_df = input_df[feature_columns]
 
-    # Encode dan Scale
+    # Scaling
     input_scaled = scaler.transform(input_df)
 
     # Prediksi
     pred = model.predict(input_scaled)
     label = label_encoder.inverse_transform(pred)
 
-    # Tampilkan hasil
     st.success(f"Hasil Klasifikasi: **{label[0]}**")
