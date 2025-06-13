@@ -10,8 +10,6 @@ label_encoder = joblib.load("models/label_encoder.pkl")
 feature_columns = joblib.load("models/feature_columns.pkl")
 
 st.title("🚀 Aplikasi Klasifikasi Obesitas")
-st.write("Fitur yang diminta model:", feature_columns)
-st.write("Fitur hasil input user:", input_df.columns.tolist())
 st.markdown("Masukkan data berikut untuk memprediksi klasifikasi obesitas:")
 
 # Buat form input fitur
@@ -35,7 +33,6 @@ with st.form("input_form"):
 
     submitted = st.form_submit_button("Prediksi")
 
-# Jika form disubmit
 if submitted:
     # Buat dataframe dari input
     input_dict = {
@@ -58,18 +55,24 @@ if submitted:
     }
     input_df = pd.DataFrame(input_dict)
 
-    # Proses get_dummies seperti saat training
+    # Preprocessing: get_dummies
     input_df = pd.get_dummies(input_df)
 
-    # Tambahkan kolom yang mungkin tidak muncul di input (harus ada semua fitur)
+    # === Fix Final Aman ===
+    # Tambah kolom yang hilang (harus 0 jika tidak ada)
     missing_cols = [col for col in feature_columns if col not in input_df.columns]
     for col in missing_cols:
-        input_df[col] = 0  # kolom tidak muncul dianggap 0
+        input_df[col] = 0
 
-    # Urutkan kolom sesuai saat training
+    # Hapus kolom yang tidak dikenali model
+    extra_cols = [col for col in input_df.columns if col not in feature_columns]
+    if extra_cols:
+        input_df.drop(columns=extra_cols, inplace=True)
+
+    # Urutkan kolom sesuai model
     input_df = input_df[feature_columns]
 
-    # Scaling
+    # Transformasi dengan scaler
     input_scaled = scaler.transform(input_df)
 
     # Prediksi
