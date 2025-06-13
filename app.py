@@ -4,10 +4,10 @@ import numpy as np
 import joblib
 
 # Load model dan preprocessing
-model = joblib.load("xgb_best.pkl")
-scaler = joblib.load("scaler.pkl")
-label_encoder = joblib.load("label_encoder.pkl")
-feature_columns = joblib.load("feature_columns.pkl")
+model = joblib.load("models/xgb_best.pkl")
+scaler = joblib.load("models/scaler.pkl")
+label_encoder = joblib.load("models/label_encoder.pkl")
+feature_columns = joblib.load("models/feature_columns.pkl")
 
 st.title("🚀 Aplikasi Klasifikasi Obesitas")
 
