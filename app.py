@@ -3,156 +3,70 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# ----------------------------------------
-# 1. Load saved artifacts
-# ----------------------------------------
-scaler           = joblib.load('models/scaler.pkl')
-xgb_tuned        = joblib.load('models/xgb_best.pkl')
-le               = joblib.load('models/label_encoder.pkl')
-feature_columns  = joblib.load('models/feature_columns.pkl')
+# Load model dan preprocessing
+model = joblib.load("xgb_best.pkl")
+scaler = joblib.load("scaler.pkl")
+label_encoder = joblib.load("label_encoder.pkl")
+feature_columns = joblib.load("feature_columns.pkl")
 
-with open('dataset_info.md', 'r') as f:
-    dataset_info = f.read()
+st.title("🚀 Aplikasi Klasifikasi Obesitas")
 
-# Numeric features that were scaled
-num_cols = ['Age','Height','Weight','FCVC','NCP','CH2O','FAF','TUE']
+st.markdown("Masukkan data berikut untuk memprediksi klasifikasi obesitas:")
 
-# ----------------------------------------
-# Category → code mappings
-# ----------------------------------------
-gender_map = {'Female': 0, 'Male': 1}
-calc_map   = {'no': 0, 'Sometimes': 1, 'Frequently': 2}
-favc_map   = {'no': 0, 'yes': 1}
-scc_map    = {'no': 0, 'yes': 1}
-smoke_map  = {'no': 0, 'yes': 1}
-fam_map    = {'no': 0, 'yes': 1}
-caec_map   = {'no': 0, 'Sometimes': 1, 'Frequently': 2, 'Always': 3}
-mtrans_map = {
-    'Public_Transportation': 0,
-    'Walking':               1,
-    'Automobile':            2,
-    'Bike':                  3,
-    'Motorbike':             4
-}
+# Buat form input fitur
+with st.form("input_form"):
+    Gender = st.selectbox("Jenis Kelamin", ["Male", "Female"])
+    Age = st.number_input("Usia", min_value=1.0, max_value=100.0, value=25.0)
+    Height = st.number_input("Tinggi Badan (meter)", min_value=1.0, max_value=2.5, value=1.70)
+    Weight = st.number_input("Berat Badan (kg)", min_value=30.0, max_value=200.0, value=70.0)
+    family_history_with_overweight = st.selectbox("Riwayat Keluarga Kegemukan", ["yes", "no"])
+    FAVC = st.selectbox("Sering Konsumsi Makanan Tinggi Kalori", ["yes", "no"])
+    FCVC = st.slider("Frekuensi Konsumsi Sayur (0-3)", 0.0, 3.0, 2.0)
+    NCP = st.slider("Jumlah Makan Utama per Hari", 1.0, 4.0, 3.0)
+    CAEC = st.selectbox("Makan Antara Waktu Makan", ["no", "Sometimes", "Frequently", "Always"])
+    SMOKE = st.selectbox("Merokok", ["yes", "no"])
+    CH2O = st.slider("Jumlah Air per Hari", 0.0, 3.0, 2.0)
+    SCC = st.selectbox("Konsumsi Makanan Kalori Ekstra", ["yes", "no"])
+    FAF = st.slider("Aktivitas Fisik (0-3)", 0.0, 3.0, 1.0)
+    TUE = st.slider("Waktu Layar per Hari (0-3)", 0.0, 3.0, 2.0)
+    CALC = st.selectbox("Konsumsi Alkohol", ["no", "Sometimes", "Frequently", "Always"])
+    MTRANS = st.selectbox("Moda Transportasi", ["Public_Transportation", "Walking", "Automobile", "Motorbike", "Bike"])
 
-# ----------------------------------------
-# 2. Preprocessing helper
-# ----------------------------------------
-def preprocess_input(df_in: pd.DataFrame) -> pd.DataFrame:
-    df = df_in.copy()
-    
+    submitted = st.form_submit_button("Prediksi")
 
-    cat_cols = [
-        'Gender','CALC','FAVC','SCC','SMOKE',
-        'family_history_with_overweight','CAEC','MTRANS'
-    ]
-    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+# Jika form disubmit
+if submitted:
+    # Bentuk dataframe dari input
+    input_dict = {
+        'Gender': [Gender],
+        'Age': [Age],
+        'Height': [Height],
+        'Weight': [Weight],
+        'family_history_with_overweight': [family_history_with_overweight],
+        'FAVC': [FAVC],
+        'FCVC': [FCVC],
+        'NCP': [NCP],
+        'CAEC': [CAEC],
+        'SMOKE': [SMOKE],
+        'CH2O': [CH2O],
+        'SCC': [SCC],
+        'FAF': [FAF],
+        'TUE': [TUE],
+        'CALC': [CALC],
+        'MTRANS': [MTRANS]
+    }
 
-    for col in feature_columns:
-        if col not in df.columns:
-            df[col] = 0
+    input_df = pd.DataFrame(input_dict)
 
-    df = df[feature_columns]
-    df[num_cols] = scaler.transform(df[num_cols])
-    return df
+    # Pastikan urutan kolom sama dengan saat training
+    input_df = input_df[feature_columns]
 
-# ----------------------------------------
-# 3. Sidebar navigation
-# ----------------------------------------
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", [ "Single Prediction", "Bulk Prediction"])
+    # Encode dan Scale
+    input_scaled = scaler.transform(input_df)
 
-# ----------------------------------------
-# 4. ABOUT page
-# ----------------------------------------
-if page == "About":
-    st.title("Obesity Classification App")
-    
-    st.markdown("""
-    **Purpose:**  
-    Classify individuals into obesity categories using KNN, SVM, and XGBoost (all hyperparameter‑tuned).
-    """)
-# ----------------------------------------
-# 5. SINGLE PREDICTION page
-# ----------------------------------------
-elif page == "Single Prediction":
-    st.title("Single‑Row Prediction")
+    # Prediksi
+    pred = model.predict(input_scaled)
+    label = label_encoder.inverse_transform(pred)
 
-    with st.form("input_form"):
-        age     = st.number_input("Age (years)", 14, 80, 25)
-        gender  = st.selectbox("Gender", list(gender_map.keys()))
-        height  = st.number_input("Height (meters)", 1.2, 2.2, 1.70, format="%.2f")
-        weight  = st.number_input("Weight (kg)", 30.0, 200.0, 60.0, format="%.1f")
-
-        FCVC    = st.number_input("Vegetable freq (FCVC)", 0, 10, 3)
-        NCP     = st.number_input("Meals per day (NCP)", 0, 10, 3)
-        CH2O    = st.number_input("Water intake L (CH2O)", 0.0, 10.0, 2.0)
-        FAF     = st.number_input("Physical activity freq (FAF)", 0.0, 15.0, 1.0)
-        TUE     = st.number_input("Device use hrs (TUE)", 0, 10, 2)
-
-        CALC    = st.selectbox("Caloric drinks (CALC)", list(calc_map.keys()))
-        FAVC    = st.selectbox("High‑cal food (FAVC)", list(favc_map.keys()))
-        SCC     = st.selectbox("Calories monitoring (SCC)", list(scc_map.keys()))
-        SMOKE   = st.selectbox("Smoking habit (SMOKE)", list(smoke_map.keys()))
-        fam     = st.selectbox("Family history overweight", list(fam_map.keys()))
-        CAEC    = st.selectbox("Snacking between meals (CAEC)", list(caec_map.keys()))
-        MTRANS  = st.selectbox("Transport mode (MTRANS)", list(mtrans_map.keys()))
-
-        submitted = st.form_submit_button("Predict")
-
-    if submitted:
-        input_df = pd.DataFrame([{
-            'Age': age,
-            'Gender': gender_map[gender],
-            'Height': height,
-            'Weight': weight,
-            'FCVC': FCVC,
-            'NCP': NCP,
-            'CH2O': CH2O,
-            'FAF': FAF,
-            'TUE': TUE,
-            'CALC': calc_map[CALC],
-            'FAVC': favc_map[FAVC],
-            'SCC': scc_map[SCC],
-            'SMOKE': smoke_map[SMOKE],
-            'family_history_with_overweight': fam_map[fam],
-            'CAEC': caec_map[CAEC],
-            'MTRANS': mtrans_map[MTRANS]
-        }])
-
-        Xp = preprocess_input(input_df)
-
-        # raw predictions
-        raw_prediction = xgb_tuned.predict(Xp)
-        p_xgb = int(raw_prediction[0])
-
-        # map back to labels
-        c_xgb = le.inverse_transform([p_xgb])[0]
-
-        st.write(f"**XGB →** {c_xgb}")
-
-# ----------------------------------------
-# 6. BULK PREDICTION page
-# ----------------------------------------
-elif page == "Bulk Prediction":
-    st.title("Bulk CSV Prediction")
-    uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
-    if uploaded_file:
-        data = pd.read_csv(uploaded_file)
-        st.write("Preview of uploaded data:")
-        st.dataframe(data.head())
-
-        proc = preprocess_input(data)
-        preds = xgb_best.predict(proc)
-        data['Predicted_NObeyesdad'] = le.inverse_transform(preds)
-
-        st.subheader("Predictions")
-        st.dataframe(data[['Predicted_NObeyesdad']])
-
-        csv = data.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            "Download predictions as CSV",
-            data=csv,
-            file_name="predictions.csv",
-            mime="text/csv"
-        )
+    # Tampilkan hasil
+    st.success(f"Hasil Klasifikasi: **{label[0]}**")
