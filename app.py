@@ -34,17 +34,12 @@ if page == "Beranda":
     - **Random Forest Tuned** (~94% akurasi)
 
     ---
-    Silakan buka menu **Prediksi** untuk mencoba aplikasi.
+    Silakan buka menu **Prediksi** di sebelah kiri untuk mencoba aplikasi.
     """)
 
 # === Prediction Page ===
 elif page == "Prediksi":
     st.title("🔍 Prediksi Kategori Obesitas")
-
-    # Pilihan Model
-    model_choice = st.selectbox("Pilih Model Machine Learning", [
-        "XGBoost Tuned", "Gradient Boosting Tuned", "Random Forest Tuned"
-    ])
 
     # Dokumentasi cara isi data
     with st.expander("📘 Petunjuk Pengisian Data"):
@@ -70,18 +65,26 @@ elif page == "Prediksi":
 
     input_df = input_user()
 
+    # Pilihan Model setelah input
+    model_choice = st.selectbox("Pilih Model Machine Learning", [
+        "XGBoost Tuned", "Gradient Boosting Tuned", "Random Forest Tuned"
+    ])
+
     if st.button("🔮 Prediksi"):
-        input_df = input_df[feature_columns]
-        input_scaled = scaler.transform(input_df)
+        try:
+            input_df = input_df[feature_columns]
+            input_scaled = scaler.transform(input_df)
 
-        if model_choice == "XGBoost Tuned":
-            model = xgb_model
-        elif model_choice == "Gradient Boosting Tuned":
-            model = gb_model
-        else:
-            model = rf_model
+            if model_choice == "XGBoost Tuned":
+                model = xgb_model
+            elif model_choice == "Gradient Boosting Tuned":
+                model = gb_model
+            else:
+                model = rf_model
 
-        pred = model.predict(input_scaled)
-        label = label_encoder.inverse_transform(pred)
+            pred = model.predict(input_scaled)
+            label = label_encoder.inverse_transform(pred)
 
-        st.success(f"✅ Prediksi Kategori Obesitas Anda: **{label[0]}**")
+            st.success(f"✅ Prediksi Kategori Obesitas Anda: **{label[0]}**")
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat prediksi: {e}")
