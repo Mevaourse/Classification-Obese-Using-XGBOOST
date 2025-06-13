@@ -9,7 +9,7 @@ An interactive machine learning web app for predicting obesity levels based on u
 
 ## 📊 Dataset
 
-The app uses the **Obesity Level Estimation dataset**, available on [Kaggle](https://www.kaggle.com/datasets/sid321axn/obesity-level-estimation).
+The app uses the **Obesity Level Estimation dataset**, available on [DRIVE](https://drive.google.com/file/d/16mZS56ed1SQyimDxRGGKvihvIMri2exM/view).
 
 Features include:
 - `Gender`, `Age`, `Height`, `Weight`
@@ -96,11 +96,7 @@ streamlit run app.py
 
 ---
 
-## 🔒 License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
 
 ## 👤 Author
 
