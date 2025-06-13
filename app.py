@@ -72,8 +72,8 @@ if submitted:
     # Urutkan kolom sesuai model
     input_df = input_df[feature_columns]
 
-    # Transformasi dengan scaler
-    input_scaled = scaler.transform(input_df)
+    # Transformasi (tanpa nama kolom)
+    input_scaled = scaler.transform(input_df.to_numpy())
 
     # Prediksi
     pred = model.predict(input_scaled)
