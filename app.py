@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load model dan objek preprocessing
+# === Load Models and Tools ===
 xgb_model = joblib.load('models/xgb_tuned.pkl')
 gb_model = joblib.load('models/gb_tuned.pkl')
 rf_model = joblib.load('models/rf_tuned.pkl')
@@ -10,60 +10,70 @@ scaler = joblib.load('models/scaler.pkl')
 label_encoder = joblib.load('models/label_encoder.pkl')
 feature_columns = joblib.load('models/feature_columns.pkl')
 
-# Sidebar Navigation
+# === Sidebar Navigation ===
 st.sidebar.title("📌 Navigasi")
 page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Prediksi"])
 
-# =======================
-# Halaman Landing / Beranda
-# =======================
+# === Landing Page ===
 if page == "Beranda":
     st.title("📊 Aplikasi Klasifikasi Obesitas")
-
     st.markdown("""
     ### 📝 Tentang Aplikasi
-    Aplikasi ini menggunakan machine learning untuk memprediksi **kategori obesitas** seseorang berdasarkan informasi gaya hidup dan kesehatan.
+    Aplikasi ini memanfaatkan machine learning untuk mengklasifikasikan kategori obesitas seseorang berdasarkan data gaya hidup dan kesehatan seperti:
+    - Pola makan (jumlah makan, konsumsi air, fast food, alkohol)
+    - Aktivitas fisik (frekuensi olahraga, waktu layar)
+    - Riwayat keluarga, kebiasaan merokok, transportasi, dan lainnya.
 
     ### 🎯 Tujuan
-    - Memberikan prediksi cepat dan akurat terkait obesitas.
-    - Mendorong kesadaran terhadap gaya hidup sehat.
-    - Menerapkan model pembelajaran mesin terbaik untuk klasifikasi.
+    - Menyediakan prediksi cepat untuk risiko obesitas
+    - Membantu pengguna memahami faktor yang memengaruhi berat badan
 
-    ### 🧠 Model yang Digunakan
-    - **XGBoost (Tuned)** – Akurasi ~96%
-    - **Gradient Boosting (Tuned)** – Akurasi ~95%
-    - **Random Forest (Tuned)** – Akurasi ~94%
+    ### 🤖 Model yang Digunakan
+    - **XGBoost Tuned** (~96% akurasi)
+    - **Gradient Boosting Tuned** (~95% akurasi)
+    - **Random Forest Tuned** (~94% akurasi)
 
-    --- 
-    Pilih halaman **Prediksi** di sidebar untuk mencoba aplikasi ini.
+    ---
+    Silakan buka menu **Prediksi** untuk mencoba aplikasi.
     """)
 
-# =======================
-# Halaman Prediksi
-# =======================
+# === Prediction Page ===
 elif page == "Prediksi":
     st.title("🔍 Prediksi Kategori Obesitas")
 
+    # Pilihan Model
     model_choice = st.selectbox("Pilih Model Machine Learning", [
         "XGBoost Tuned", "Gradient Boosting Tuned", "Random Forest Tuned"
     ])
 
+    # Dokumentasi cara isi data
+    with st.expander("📘 Petunjuk Pengisian Data"):
+        st.markdown("""
+        - Masukkan nilai **angka** sesuai kondisi Anda:
+            - Contoh: `Weight = 70`, `Height = 1.75`
+        - Untuk kolom **dengan pilihan 0 / 1**, artinya:
+            - `0` = Tidak
+            - `1` = Ya
+        - Kolom seperti `Gender`, `MTRANS`, `CAEC`, dll sudah diubah menjadi angka.
+            - Pastikan Anda mengisi sesuai label yang diberikan.
+        """)
+
+    # Fungsi Input User
     def input_user():
         data = {}
         for col in feature_columns:
             if col in ['Gender', 'family_history_with_overweight', 'FAVC', 'CAEC', 'SMOKE', 'SCC', 'CALC', 'MTRANS']:
-                data[col] = st.selectbox(f"{col}", [0, 1])  # bisa diganti dengan label asli
+                data[col] = st.selectbox(f"{col} (0 = Tidak, 1 = Ya)", [0, 1])
             else:
-                data[col] = st.number_input(f"{col}", step=0.1)
+                data[col] = st.number_input(f"{col}", min_value=0.0, step=0.1)
         return pd.DataFrame([data])
 
     input_df = input_user()
 
-    if st.button("Lakukan Prediksi"):
+    if st.button("🔮 Prediksi"):
         input_df = input_df[feature_columns]
         input_scaled = scaler.transform(input_df)
 
-        # Pemilihan model
         if model_choice == "XGBoost Tuned":
             model = xgb_model
         elif model_choice == "Gradient Boosting Tuned":
@@ -71,8 +81,7 @@ elif page == "Prediksi":
         else:
             model = rf_model
 
-        # Prediksi
         pred = model.predict(input_scaled)
         label = label_encoder.inverse_transform(pred)
 
-        st.success(f"Hasil Prediksi: **{label[0]}**")
+        st.success(f"✅ Prediksi Kategori Obesitas Anda: **{label[0]}**")
